@@ -1,0 +1,621 @@
+
+
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tomasz Wierzbicki - Penetration Tester | OSCP+</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        bg: '#0A0A0A',
+                        'bg-deep': '#050505',
+                        surface: '#111111',
+                        text: '#E8F5E9',
+                        'text-secondary': '#A5D6A7',
+                        'text-muted': '#66BB6A',
+                        'accent-1': '#00FF41',
+                        'accent-2': '#FFA500',
+                        'accent-3': '#FF0000',
+                        'glass-bg': 'rgba(0,255,65,0.04)',
+                        'glass-border': 'rgba(0,255,65,0.12)',
+                        vignette: 'rgba(0,0,0,0.6)'
+                    },
+                    fontFamily: {
+                        display: ['JetBrains Mono', 'monospace'],
+                        body: ['Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --color-bg: #0A0A0A;
+            --color-text: #E8F5E9;
+            --glow-color-rgb: 0,255,65;
+        }
+        *, ::before, ::after { box-sizing: border-box; }
+        html, body { 
+            background: var(--color-bg); 
+            margin: 0; 
+            color: var(--color-text); 
+            overflow-x: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        body { 
+            font-family: 'Inter', sans-serif; 
+        }
+        .deck { width: 100vw; height: 100vh; position: relative; }
+        .slide { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+            background: var(--color-bg); 
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            overflow-y: auto;
+            overflow-x: hidden;
+            opacity: 0; transform: scale(0.95); transition: opacity 0.7s ease, transform 0.7s ease; 
+            pointer-events: none;
+        }
+        .slide.active { opacity: 1; transform: scale(1); pointer-events: all; }
+        .content { 
+            position: relative; z-index: 2; width: 100%;
+            max-width: 1100px; 
+            padding: clamp(1.5rem, 4vw, 4rem);
+            padding-bottom: 80px;
+            margin: auto;
+        }
+        .slide-centered {
+            justify-content: center;
+        }
+        .nav-controls { 
+            position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%); 
+            display: flex; align-items: center; gap: 16px; z-index: 100; 
+            background: rgba(0,255,65,0.04); backdrop-filter: blur(10px); 
+            padding: 10px 24px; border-radius: 40px; border: 1px solid rgba(0,255,65,0.12);
+        }
+        .nav-btn { 
+            width: 40px; height: 40px; border: none; background: rgba(0,255,65,0.06); 
+            color: #00FF41; border-radius: 50%; font-size: 1.2rem; cursor: pointer; 
+            display: flex; align-items: center; justify-content: center; transition: background 0.3s;
+        }
+        .nav-btn:hover { background: rgba(0,255,65,0.15); }
+        .slide-dots { display: flex; gap: 8px; }
+        .slide-dots .dot { 
+            width: 10px; height: 10px; border-radius: 50%; 
+            background: rgba(0,255,65,0.15); cursor: pointer; transition: background 0.3s, transform 0.3s;
+        }
+        .slide-dots .dot.active { background: #00FF41; transform: scale(1.3); }
+        .slide-counter { 
+            font-size: 0.8rem; color: #66BB6A; min-width: 40px; text-align: center; 
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .reveal { opacity: 0; transform: translateY(20px); animation: revealAnim 0.8s forwards; }
+        @keyframes revealAnim { to { opacity: 1; transform: translateY(0); } }
+        .text-glow { text-shadow: 0 0 20px rgba(0,255,65,0.5), 0 0 40px rgba(0,255,65,0.2); }
+        .stat-glow { text-shadow: 0 0 30px rgba(0,255,65,0.6), 0 0 60px rgba(0,255,65,0.25); }
+        @keyframes glow-pulse {
+            0%, 100% { text-shadow: 0 0 20px rgba(0,255,65,0.5), 0 0 40px rgba(0,255,65,0.2); }
+            50% { text-shadow: 0 0 30px rgba(0,255,65,0.8), 0 0 60px rgba(0,255,65,0.3); }
+        }
+        .glow-pulse { animation: glow-pulse 3s ease-in-out infinite; }
+        @keyframes float-slow {
+            0%, 100% { transform: translate(0,0) scale(1); }
+            25% { transform: translate(60px,-50px) scale(1.12); }
+            50% { transform: translate(-40px,40px) scale(0.9); }
+            75% { transform: translate(50px,20px) scale(1.08); }
+        }
+        @keyframes float-drift {
+            0% { transform: translate(0,0) scale(1) rotate(0deg); }
+            33% { transform: translate(-50px,-60px) scale(1.15) rotate(3deg); }
+            66% { transform: translate(40px,30px) scale(0.88) rotate(-2deg); }
+            100% { transform: translate(0,0) scale(1) rotate(0deg); }
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+        .gradient-mesh { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+        .blob { position: absolute; border-radius: 50%; filter: blur(80px); animation: float-slow 10s ease-in-out infinite; }
+        .blob:nth-child(2) { animation: float-drift 14s ease-in-out infinite; }
+        .blob:nth-child(3) { animation: float-slow 18s ease-in-out infinite reverse; }
+        .slide::before {
+            content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%' height='100%' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+            background-repeat: repeat; background-size: 256px 256px; opacity: 0.03; mix-blend-mode: overlay;
+        }
+        .slide::after {
+            content: ''; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 50%, var(--vignette) 100%);
+        }
+        @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
+        .scanline { 
+            position: absolute; top: 0; left: 0; width: 100%; height: 3px; 
+            background: linear-gradient(transparent, rgba(0,255,65,0.08), transparent); 
+            z-index: 1; animation: scanline 8s linear infinite; pointer-events: none;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        .cursor-blink::after { content: ''; animation: blink 1s step-end infinite; color: #00FF41; }
+        .terminal-border { 
+            border: 1px solid rgba(0,255,65,0.2); border-radius: 6px; 
+            background: rgba(0,255,65,0.03);
+        }
+        .terminal-header { 
+            background: rgba(0,255,65,0.08); padding: 6px 12px; 
+            border-bottom: 1px solid rgba(0,255,65,0.15); 
+            font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: #66BB6A; 
+            display: flex; align-items: center; gap: 8px;
+        }
+        .terminal-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .bar-track { 
+            background: rgba(0,255,65,0.08); border-radius: 4px; height: 8px; overflow: hidden;
+        }
+        .bar-fill { 
+            height: 100%; border-radius: 4px; 
+            background: linear-gradient(90deg, #00FF41, #FFA500); transition: width 1s ease;
+        }
+
+        .cert-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            align-items: start;
+            width: 100%;
+        }
+
+        .about-photo {
+            width: 100%;
+            max-width: 350px;
+            height: auto;
+            aspect-ratio: 7/8;
+            object-fit: cover;
+            border-radius: 12px;
+            border: 2px solid rgba(0,255,65,0.3);
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .company-logo {
+            width: 100%;
+            max-width: 200px;
+            height: auto;
+            display: block;
+            margin-top: 1rem;
+        }
+
+        .contact-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: center;
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+        }
+
+        @media (max-width: 480px) {
+            .content { padding: 1rem 1rem 80px; }
+            .nav-controls { padding: 8px 14px; gap: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="mouse-spotlight" style="position:fixed; inset:0; z-index:99; pointer-events:none;"></div>
+    <div class="deck">
+
+        <!-- SLIDE 1: MIAN -->
+        <div class="slide active" data-slide="1">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:500px; height:500px; top:-100px; right:-100px; background:#00FF41; opacity:0.08;"></div>
+                <div class="blob" style="width:300px; height:300px; bottom:-80px; left:60px; background:#FFA500; opacity:0.06;"></div>
+                <div class="blob" style="width:200px; height:200px; top:40%; left:15%; background:#00FF41; opacity:0.05;"></div>
+            </div>
+
+            <div class="scanline"></div>
+            <canvas class="particle-canvas" style="position:absolute; inset:0; z-index:1;"></canvas>
+            <div class="content text-center">
+
+            <div>
+                <img style="display: block; margin: 0 auto; width: 200px; height: 200px; border-radius: 50%; overflow: hidden; border: 3px solid #66BB6A;" src=https://media.licdn.com/dms/image/v2/D4D03AQFMM4DP_WpkWQ/profile-displayphoto-scale_400_400/B4DZz1g462GQAg-/0/1773645566830?e=1777507200&v=beta&t=aUZ5ra-9aNmm5ET14r5iiZXcgB2Z8-nQq9R8evZTeNs>
+                <br>
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.8rem; color:#66BB6A; letter-spacing:0.2em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # WHOAMI
+                </div>
+            </div>
+                <h1 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.6rem, 3.5vw, 2.8rem); font-weight:700; background:linear-gradient(135deg, #00FF41, #FFA500, #00FF41); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-0.02em; margin-bottom:1rem; line-height:1.2;" class="reveal cursor-blink">
+                    Tomasz Wierzbicki<br><span style="font-size:0.85em;">OSCP+ Penetration Tester</span>
+                </h1>
+                <p style="font-size:clamp(0.85rem,1.5vw,1.1rem); color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase;" class="reveal">
+                    Red Team Specialist | Cybersecurity Speaker
+                </p>
+                <br>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: ABOUT -->
+        <div class="slide" data-slide="2">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:350px; height:350px; top:-80px; right:-80px; background:#00FF41; opacity:0.06;"></div>
+                <div class="blob" style="width:250px; height:250px; bottom:-60px; left:-40px; background:#FFA500; opacity:0.05;"></div>
+            </div>
+            <div class="scanline"></div>
+            <div class="content">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # cat tomasz.txt
+                </div>
+
+                <!-- About me + photo -->
+                <div class="reveal" style="display:flex; flex-wrap:wrap; gap:2rem; align-items:flex-start; margin-bottom:1.5rem;">
+                    <div style="flex:1 1 300px; min-width:0;">
+                        <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.4rem,3vw,2.2rem); font-weight:700; color:#00FF41; margin-bottom:1rem;">
+                            About me
+                        </h2>
+                        <p style="font-size:1.1rem; line-height:1.7; color:#A5D6A7;">
+                            Hi! I am Tomasz, OSCP+ certified pentester and cybersecurity tutor/speaker, curently preparing for OSEP. Outside of hacking, I enjoy playing guitar and reading books. A scout at heart – I've solo-parachuted (3x), sailed, ice-dived, hiked mountains, slept in remote huts, and more. Always up for the next adventure.
+                        </p>
+                    </div>
+                    <!--  <div style="flex:0 1 auto; position:relative;">
+                        <img src="https://media.licdn.com/dms/image/v2/D4E22AQGKX2maTJkR0Q/feedshare-shrink_800/B4EZz2WK5mI8BI-/0/1773659533872?e=1777507200&v=beta&t=5zEkBiO9P8CJLvFmA1afv8pu6J4aZdCOfCLVCFdiU64"
+                             alt="Railway cybersecurity speech"
+                             class="about-photo"
+                             onerror="this.src='https://via.placeholder.com/350x450/111111/00FF41?text=PHOTO'">
+                        <div style="position:absolute; top:12px; right:12px; background:rgba(0,255,65,0.9); color:#000; padding:0.3rem 0.8rem; border-radius:20px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; font-weight:700;">
+                            Railway cybersecurity speech
+                        </div>-->
+                    </div>
+                    <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.4rem,3vw,2.2rem); font-weight:700; color:#00FF41; margin-bottom:1.5rem;" class="reveal">
+                        What do I offer?
+                    </h2>
+                    <div class="reveal" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px,1fr)); gap:1rem;">
+                        <div style="padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#00FF41; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Penetration testing</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">Infrastructure, Web (OWASP Top 10), Active Directory and Wi-Fi penetration testing.</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Trainings and speeches</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">I am able to create and conduct trainings and represent you on conferences.</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#00FF41;  font-weight:700; font-size:1rem; margin-bottom:0.5rem;">3 years of experience</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">I offer expertise supported by 3 years of experience in various positions in the cybersecurity market.</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid rgba(255,0,0,0.15); border-radius:8px; background:rgba(255,0,0,0.03);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#ff0022; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Red Teaming</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">MITRE ATT&CK, Adversary Simulations with C2, AV/EDR evasion, cooperation with other Specialists.</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Phishing simulations</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">Conducting educational Phishing attacks and awareness training with Gophish, Knowbe4, Hoxhound and more!</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid rgba(255,0,221,0.15); border-radius:8px; background:rgba(247,0,255,0.03);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#ff00aa; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Purple Teaming</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">Caldera adversary emulation, experience with constant cooperation with SOC teams, cyber-range operations, wargaming and more.</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid  rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#00FF41; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Lego Serious Play</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">Enhancing team performance with Lego serious play cybersecurity workshops.</p>
+                        </div>
+                        <div style="padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);">
+                            <div style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-weight:700; font-size:1rem; margin-bottom:0.5rem;">Content Creation</div>
+                            <p style="color:#A5D6A7; font-size:0.85rem; margin:0;">Cybersecurity related content creation, including tiktoks, youtube videos, articles.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: CERTIFICATIONS -->
+        <div class="slide" data-slide="3">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:400px; height:400px; top:-100px; left:80px; background:#00FF41; opacity:0.07;"></div>
+                <div class="blob" style="width:200px; height:200px; bottom:-50px; right:-40px; background:#FFA500; opacity:0.05;"></div>
+            </div>
+            <div class="scanline"></div>
+            <div class="content">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # whoami /priv
+                </div>
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.5rem,3vw,2rem); font-weight:700; color:#00FF41; margin-bottom:1.2rem;" class="reveal">
+                    Certifications and experience
+                </h2>
+
+                <div class="cert-grid">
+                    <!-- Terminal list -->
+                    <div class="reveal">
+                        <div class="terminal-border">
+                            <div class="terminal-header">
+                                <div class="terminal-dot" style="background:#FF5F56;"></div>
+                                <div class="terminal-dot" style="background:#FFBD2E;"></div>
+                                <div class="terminal-dot" style="background:#27C93F;"></div>
+                                <span style="margin-left:4px;">certs.txt</span>
+                            </div>
+                            <div style="padding:1.5rem; font-family:'JetBrains Mono', monospace; font-size:0.9rem; line-height:1.8;">
+                                <div style="color:#00FF41; font-weight:600;">● OSCP, OSCP+ | <a href="https://credentials.offsec.com/1ff19ace-f7c9-48c2-852d-ff6d194e04bb#acc.TjYSlRzm" style="color:#00c3ff;">Credentials link →</a></div>
+                                <div style="color:#00FF41; font-weight:600;">● OSWP | <a href="https://credentials.offsec.com/572b9887-0d53-4c0b-83f4-bd19616ee96e#acc.4ZgqHWiL" style="color:#00c3ff;">Credentials link →</a></div>
+                                <div style="color:#FFA500; font-weight:600;">● First English Certificate</div>
+                                <div style="color:#FFA500; font-weight:600;">● HackerU Red Team Specialist Certificate</div>
+                                <div style="color:#66BB6A;">● Life-Guard related certifications (UE Lifeguard, First Aid, Referral Diver)</div>
+                                <br>
+                                <div style="color:#00FF41; font-weight:600;">Detailed Experience:<br>
+                                    <a href="https://docs.google.com/document/d/1GJg71BnWxP6ofdCt9ZlvumG3mp9mDx9-C5MFRTdlBFg/edit?usp=sharing" style="color:#00c3ff;">● Resume Link →</a><br>
+                                    <a href="https://credentials.offsec.com/profile/tomaszadamwierzbicki968521/wallet" style="color:#00c3ff;">● Offsec Badges →</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cert images -->
+                    <div class="reveal" style="display:flex; flex-direction:column; gap:1.5rem;">
+                        <div style="position:relative;">
+                            <img src="https://images.credential.net/embed/akgq3umv_1775443163476.png"
+                                 alt="OSCP Certificate"
+                                 style="width:100%; height:auto; max-height:350px; object-fit:cover; border-radius:12px; border:2px solid rgba(0,255,65,0.3); cursor:pointer;"
+                                 onerror="this.src='https://via.placeholder.com/350x200/111111/00FF41?text=OSCP+CERT'">
+                            <div style="position:absolute; top:12px; right:12px; background:rgba(0,255,65,0.9); color:#000; padding:0.3rem 0.8rem; border-radius:20px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; font-weight:700;">
+                                OSCP+
+                            </div>
+                        </div>
+                        <div style="position:relative;">
+                            <img src="https://api.accredible.com/v1/frontend/credential_website_embed_image/certificate/150709877"
+                                 alt="OSWP Certificate"
+                                 style="width:100%; height:auto; max-height:350px; object-fit:cover; border-radius:12px; border:2px solid rgba(255,165,0,0.3); cursor:pointer;"
+                                 onerror="this.src='https://via.placeholder.com/350x200/111111/FFA500?text=OSWP+CERT'">
+                            <div style="position:absolute; top:12px; right:12px; background:rgba(255,165,0,0.9); color:#000; padding:0.3rem 0.8rem; border-radius:20px; font-family:'JetBrains Mono', monospace; font-size:0.75rem; font-weight:700;">
+                                OSWP
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: EDUCATION -->
+        <div class="slide" data-slide="4">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:350px; height:350px; top:-80px; right:-80px; background:#00FF41; opacity:0.06;"></div>
+                <div class="blob" style="width:200px; height:200px; bottom:-50px; left:30px; background:#FFA500; opacity:0.05;"></div>
+            </div>
+            <div class="scanline"></div>
+            <div class="content">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # privilege::debug 
+                </div>
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.5rem,3vw,2rem); font-weight:700; color:#00FF41; margin-bottom:1.2rem;" class="reveal">
+                    Education
+                </h2>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:1.5rem;">
+                    <div class="reveal">
+                        <h3 style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-size:1.1rem; margin-bottom:0.5rem;">Catholic University of Lublin</h3>
+                        <p style="color:#A5D6A7;">National Security - Bachelor</p>
+                    </div>
+                    <div class="reveal">
+                        <h3 style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-size:1.1rem; margin-bottom:0.5rem;">HackerU x University of Warsaw</h3>
+                        <p style="color:#A5D6A7;">Red Team Specialist Course<br><a href="https://tinyurl.com/rzxneku7" style="color:#00FF41;">Agenda →</a></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: JOB EXPERIENCE -->
+        <div class="slide" data-slide="5">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:400px; height:400px; top:-100px; right:80px; background:#00FF41; opacity:0.07;"></div>
+                <div class="blob" style="width:250px; height:250px; bottom:-60px; left:40px; background:#FFA500; opacity:0.05;"></div>
+            </div>
+            <div class="scanline"></div>
+            <div class="content">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # cat /root/.bash_history
+                </div>
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.5rem,3vw,2rem); font-weight:700; color:#00FF41; margin-bottom:1.2rem;" class="reveal">
+                    Experience
+                </h2>
+                <!-- FLAG{I_w1LL_G1v3_U_C4NdY_:)} -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:1rem;">
+                    <div style="padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);" class="reveal">
+                        <div style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-weight:700; font-size:0.9rem; margin-bottom:0.5rem;">Coding Giants, 2 years</div>
+                        <p style="color:#A5D6A7; font-size:0.85rem; margin:0 0 0.5rem;">Pro-tutor – conducting cybersecurity and python based lessons for kids and teens aged 7–17, participation in lesson creation process and selling my first pentest :).</p>
+                        <img src="https://zsbelehradska.sk/wp-content/uploads/2021/09/CODING-GIANTS-LOGO-png.png" alt="Coding Giants" class="company-logo">
+                    </div>
+                    <div style="padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);" class="reveal">
+                        <div style="font-family:'JetBrains Mono', monospace; color:#FFA500; font-weight:700; font-size:0.9rem; margin-bottom:0.5rem;">Sprint Tech, 7 months</div>
+                        <p style="color:#A5D6A7; font-size:0.85rem; margin:0 0 0.5rem;">Purple team member;<br>- Elastic based SOC L1,<br>- Web and Infrastructure penetration tests.</p>
+                        <br>
+                        <img src="https://www.sprinttech.pl/wp-content/uploads/2023/04/cropped-sprintTECH_projekt-logo-horyzontalne_bialo-zolte-2000x500.png" alt="Sprint Tech" class="company-logo">
+                    </div>
+                    <div style="padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);" class="reveal">
+                        <div style="font-family:'JetBrains Mono', monospace; color:#00FF41; font-weight:700; font-size:0.9rem; margin-bottom:0.5rem;">PKP Informatyka (Polish railways IT), 10 months, current</div>
+                        <p style="color:#A5D6A7; font-size:0.85rem; margin:0 0 0.5rem;">Red team member, Critical infrastructure Pentests, Caldera adversary attacks and phishing simulations, Conducting trainings and creating cybersecurity related content.</p>
+                        <img src="https://www.pkp-informatyka.pl/wp-content/uploads/2025/08/Logo-Poziome-PKP-Informatyka-kolor-e1754570891399.png" alt="PKP Informatyka" class="company-logo">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: SOFT SKILLS -->
+        <div class="slide" data-slide="6">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:350px; height:350px; top:80px; left:60px; background:#00FF41; opacity:0.06;"></div>
+                <div class="blob" style="width:220px; height:220px; bottom:-50px; right:-40px; background:#FFA500; opacity:0.05;"></div>
+            </div>
+            <div class="scanline"></div>
+            <div class="content">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # cat soft.txt
+                </div>
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.5rem,3vw,2rem); font-weight:700; color:#00FF41; margin-bottom:1.2rem;" class="reveal">
+                    Soft Skills
+                </h2>
+                <div style="display:flex; flex-direction:column; gap:1rem; max-width:600px;">
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">🧱</span>
+                        <div>Lego Serious Play workshops for Cybersecurity teams.</div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">⛓️</span>
+                        <div>Independence, Discipline, self-organization, communication under pressure.</div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">🌱</span>
+                        <div>Proactive approach and growth mindset.</div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">❤️</span>
+                        <div>Patience and empathy.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- SLIDE 7: Work Ethic -->
+        <div class="slide" data-slide="7">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:350px; height:350px; top:80px; left:60px; background:#00FF41; opacity:0.06;"></div>
+                <div class="blob" style="width:220px; height:220px; bottom:-50px; right:-40px; background:#FFA500; opacity:0.05;"></div>
+            </div>
+            <div class="scanline"></div>
+            <div class="content">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.5rem;" class="reveal">
+                    # traceroute
+                </div>
+                <h2 style="font-family:'JetBrains Mono', monospace; font-size:clamp(1.5rem,3vw,2rem); font-weight:700; color:#00FF41; margin-bottom:1.2rem;" class="reveal">
+                    Work Ethic
+                </h2>
+                <div style="display:flex; flex-direction:column; gap:1rem; max-width:600px;">
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">💾</span>
+                        <div>Cybersecurity as a lifestyle; I constanly read about the field and embrace security as a lifestyle</div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">💼</span>
+                        <div>Hybrid model enjoyer; remote work is cool but office presence is professional</div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(0,255,65,0.15); border-radius:8px; background:rgba(0,255,65,0.03);" class="reveal">
+                        <span style="font-size:1.5rem; min-width:32px;">🏕️</span>
+                        <div>Scout-alike attitude - ability to improvise sollutions on the fly</div>
+                    </div>
+                    <div style="display:flex; align-items:flex-start; gap:1rem; padding:1rem; border:1px solid rgba(255,165,0,0.2); border-radius:8px; background:rgba(255,165,0,0.04);" class="reveal">
+                        <span style="font-size:2rem; min-width:32px;">☮︎</span>
+                        <div>Peace and love ❤️</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <!-- SLIDE 8: CONTACT -->
+        <div class="slide slide-centered" data-slide="8">
+            <div class="gradient-mesh">
+                <div class="blob" style="width:500px; height:500px; top:-100px; right:-100px; background:#00FF41; opacity:0.1;"></div>
+                <div class="blob" style="width:300px; height:300px; bottom:-80px; left:60px; background:#FFA500; opacity:0.07;"></div>
+                <div class="blob" style="width:200px; height:200px; top:40%; left:10%; background:#00FF41; opacity:0.06;"></div>
+            </div>
+            <div class="scanline"></div>
+            <canvas class="particle-canvas" style="position:absolute; inset:0; z-index:1;"></canvas>
+            <div class="content text-center">
+                <div style="font-family:'JetBrains Mono', monospace; font-size:0.7rem; color:#66BB6A; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.8rem;" class="reveal">
+                    # dir | findstr tomasz.exe
+                </div>
+                <p style="font-size:1.2rem; color:#A5D6A7; margin-bottom:2rem;" class="reveal">
+                    Ready for the next hacking adventure? <span style="color:#00FF41;">Get in touch!</span>
+                </p>
+                <div class="contact-row reveal" style="margin-bottom:1.5rem;">
+                    <span>🌍 Warsaw, PL</span>
+                    <span>📧 tomwillow1410@proton.me</span>
+                    <span><a href="https://www.linkedin.com/in/tomasz-adam-wierzbicki/" style="color:#00FF41;">🔗 LinkedIn Profile →</a></span>
+                </div>
+                <p style="font-size:1.2rem; color:#A5D6A7;" class="reveal">
+                    PS: did you find the <span style="color:#00FF41;">FLAG{...}? :)</span>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="nav-controls">
+        <button class="nav-btn" onclick="changeSlide(-1)">‹</button>
+        <div class="slide-dots" id="dots"></div>
+        <button class="nav-btn" onclick="changeSlide(1)">›</button>
+        <span class="slide-counter" id="counter">1 / 8</span>
+    </div>
+
+    <script>
+        let current = 1;
+        const total = document.querySelectorAll('.slide').length;
+        const dotsContainer = document.getElementById('dots');
+        const counter = document.getElementById('counter');
+
+        for (let i = 1; i <= total; i++) {
+            const dot = document.createElement('div');
+            dot.className = `dot ${i === 1 ? 'active' : ''}`;
+            dot.onclick = () => goToSlide(i);
+            dotsContainer.appendChild(dot);
+        }
+
+        function goToSlide(n) {
+            const prev = document.querySelector('.slide.active');
+            const next = document.querySelector(`.slide[data-slide="${n}"]`);
+            if (prev) prev.classList.remove('active');
+            if (next) next.classList.add('active');
+            if (next) next.scrollTop = 0;
+            animateSlide(next);
+            current = n;
+            updateNav();
+        }
+
+        function changeSlide(dir) {
+            let next = current + dir;
+            if (next < 1) next = total;
+            if (next > total) next = 1;
+            goToSlide(next);
+        }
+
+        function updateNav() {
+            document.querySelectorAll('.dot').forEach((d, i) => {
+                d.classList.toggle('active', i + 1 === current);
+            });
+            counter.textContent = `${current} / ${total}`;
+        }
+
+        function animateSlide(slide) {
+            if (slide) {
+                slide.querySelectorAll('.reveal').forEach((el, i) => {
+                    el.style.animation = 'none';
+                    el.offsetHeight; // force reflow
+                    el.style.animation = '';
+                    el.style.animationDelay = `${i * 0.1}s`;
+                });
+            }
+        }
+
+        document.addEventListener('keydown', e => {
+            if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); changeSlide(1); }
+            if (e.key === 'ArrowLeft') { e.preventDefault(); changeSlide(-1); }
+        });
+
+        let touchStartX = 0;
+        document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+        document.addEventListener('touchend', e => {
+            const diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) changeSlide(diff > 0 ? 1 : -1);
+        });
+
+        function initParticles() {
+            const canvases = document.querySelectorAll('.particle-canvas');
+            canvases.forEach(canvas => {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+            });
+        }
+        initParticles();
+        window.addEventListener('resize', initParticles);
+    </script>
+</body>
+</html>
