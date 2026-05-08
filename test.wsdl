@@ -1,7 +1,1 @@
-<?xml version="1.0"?>
-<!DOCTYPE wsdl:definitions [
-  <!ENTITY passwd SYSTEM "file:///etc/passwd">
-]>
-<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/" name="&passwd;">
-  <wsdl:documentation>test</wsdl:documentation>
-</wsdl:definitions>
+<![CDATA[<]]>script<![CDATA[>]]>alert(1)<![CDATA[<]]>/script<![CDATA[>]]>
